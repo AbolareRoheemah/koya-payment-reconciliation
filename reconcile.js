@@ -7,12 +7,26 @@ const fs = require("fs");
 
 let total = 0;
 let count = 0;
+const latest = {};
 
 const lines = fs.readFileSync("payments.jsonl", "utf8").split("\n").filter((l) => l.length > 0);
 for (const line of lines) {
-  const event = JSON.parse(line);
+  let event;
+  try {
+    event = JSON.parse(line);
+  } catch (e) {
+    continue;
+  }
+  if (!event.txn_id) continue;
+  if (!latest[event.txn_id] || event.ts >= latest[event.txn_id].ts) {
+    latest[event.txn_id] = event;
+  }
+}
+
+for (const txn_id in latest) {
+  const event = latest[txn_id];
   if (event.status === "success") {
-    total += Number(event.amount);
+    total += Number(String(event.amount).replace(/,/g, ""));
     count += 1;
   }
 }
